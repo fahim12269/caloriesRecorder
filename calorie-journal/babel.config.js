@@ -1,3 +1,5 @@
+// File: babel.config.js
+// Purpose: Configure Babel presets and plugins for Expo Router, NativeWind, and Reanimated.
 module.exports = function (api) {
   api.cache(true);
   return {

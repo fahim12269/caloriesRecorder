@@ -1,3 +1,5 @@
+// File: components/__tests__/StyledText-test.js
+// Purpose: Snapshot test for the MonoText component.
 import * as React from 'react';
 import renderer from 'react-test-renderer';
 

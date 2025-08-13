@@ -1,3 +1,8 @@
+/**
+ * File: constants/Colors.ts
+ * Purpose: Centralized light/dark color palette and semantic color tokens.
+ * Exports: default color object containing light and dark theme values.
+ */
 const tintColorLight = '#22c55e';
 const tintColorDark = '#16a34a';
 

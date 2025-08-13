@@ -1,3 +1,8 @@
+/**
+ * File: app/(tabs)/index.tsx
+ * Purpose: Dashboard screen showing today's totals for calories and macros.
+ * Exports: DashboardScreen (default) – computes summaries for the current day.
+ */
 import { StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import dayjs from 'dayjs';
@@ -17,6 +22,9 @@ type Entry = {
   fat: number;
 };
 
+/**
+ * Computes the sum of today's entries and renders a quick overview.
+ */
 export default function DashboardScreen() {
   const today = dayjs().format('dddd, MMM D');
   const [totals, setTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });

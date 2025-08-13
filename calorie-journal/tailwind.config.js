@@ -1,3 +1,5 @@
+// File: tailwind.config.js
+// Purpose: Tailwind CSS configuration for NativeWind in the Expo project.
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [

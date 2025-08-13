@@ -1,3 +1,8 @@
+/**
+ * File: app/+html.tsx
+ * Purpose: Defines the root HTML shell for web rendering in Expo Router.
+ * Exports: Root – wraps the document <html> element and injects global styles for web.
+ */
 import { ScrollViewStyleReset } from 'expo-router/html';
 
 // This file is web-only and used to configure the root HTML for every
@@ -27,6 +32,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * CSS string injected for web to avoid background flicker when switching themes.
+ */
 const responsiveBackground = `
 body {
   background-color: #fff;
