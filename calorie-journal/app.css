@@ -1,3 +1,6 @@
+/* File: app.css
+ * Purpose: Global styles entry for NativeWind (Tailwind) layers.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -1,8 +1,16 @@
+/**
+ * File: app/+not-found.tsx
+ * Purpose: Fallback screen rendered for unknown routes.
+ * Exports: NotFoundScreen – provides a link back to the home screen.
+ */
 import { Link, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 
+/**
+ * Renders a simple 404-style screen with navigation back to the root.
+ */
 export default function NotFoundScreen() {
   return (
     <>

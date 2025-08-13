@@ -1,8 +1,16 @@
+/**
+ * File: components/ExternalLink.tsx
+ * Purpose: Link component that opens external URLs in the system browser on native and new tab on web.
+ * Exports: ExternalLink – drop-in replacement for Link when pointing to absolute URLs.
+ */
 import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
 import { Platform } from 'react-native';
 
+/**
+ * Renders a link that opens externally. On native, intercepts press to open an in-app browser.
+ */
 export function ExternalLink(
   props: Omit<React.ComponentProps<typeof Link>, 'href'> & { href: string }
 ) {

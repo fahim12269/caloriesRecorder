@@ -1,8 +1,16 @@
+/**
+ * File: app/modal.tsx
+ * Purpose: Example modal screen used by the router to demonstrate modal presentation.
+ * Exports: ModalScreen – simple, centered modal with a separator.
+ */
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 
+/**
+ * Displays a basic modal. Adjust or extend with your content.
+ */
 export default function ModalScreen() {
   return (
     <View style={styles.container}>

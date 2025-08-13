@@ -1,3 +1,8 @@
+/**
+ * File: app/(tabs)/add.tsx
+ * Purpose: Screen for creating a new calorie journal entry with macros and notes.
+ * Exports: AddEntryScreen (default) – form-driven UI using react-hook-form and zod validation.
+ */
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,17 +32,27 @@ export type EntryForm = z.infer<typeof entrySchema>;
 
 const STORAGE_KEY = 'calorie_journal_entries_v1';
 
+/**
+ * Reads all saved entries from AsyncStorage.
+ * Returns an empty array when no entries exist.
+ */
 async function loadEntries(): Promise<any[]> {
   const json = await AsyncStorage.getItem(STORAGE_KEY);
   return json ? JSON.parse(json) : [];
 }
 
+/**
+ * Persists a new entry by prepending to the stored list in AsyncStorage.
+ */
 async function saveEntry(entry: any) {
   const entries = await loadEntries();
   const updated = [entry, ...entries];
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
 
+/**
+ * Displays a form to create a new entry, validates input, and saves to local storage.
+ */
 export default function AddEntryScreen() {
   const [showDate, setShowDate] = useState(false);
 
@@ -167,6 +182,9 @@ export default function AddEntryScreen() {
   );
 }
 
+/**
+ * Simple wrapper to show a label, children input, and an optional error message.
+ */
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <View>
@@ -177,6 +195,9 @@ function FormField({ label, error, children }: { label: string; error?: string; 
   );
 }
 
+/**
+ * Numeric input used for macro/micro nutrient fields.
+ */
 function MacroInput({ control, name, label, error }: any) {
   return (
     <View style={{ flex: 1 }}>

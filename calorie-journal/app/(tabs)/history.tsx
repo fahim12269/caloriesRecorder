@@ -1,3 +1,8 @@
+/**
+ * File: app/(tabs)/history.tsx
+ * Purpose: Displays a scrollable list of saved entries with ability to delete.
+ * Exports: HistoryScreen (default) – reads entries from AsyncStorage and renders them.
+ */
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +21,9 @@ type Entry = {
   fat: number;
 };
 
+/**
+ * Lists entries and allows removing an entry by id.
+ */
 export default function HistoryScreen() {
   const [entries, setEntries] = useState<Entry[]>([]);
 
