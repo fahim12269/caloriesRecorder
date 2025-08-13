@@ -19,6 +19,7 @@ type Entry = {
   protein: number;
   carbs: number;
   fat: number;
+  meal?: 'Breakfast' | 'Lunch' | 'Snack' | 'Dinner';
 };
 
 /**
@@ -58,6 +59,7 @@ export default function HistoryScreen() {
               <Text className="text-gray-500 text-xs">{dayjs(item.date).format('YYYY-MM-DD')}</Text>
               <Text className="text-lg font-semibold">{item.name}</Text>
               <Text className="text-gray-500">{item.calories} kcal • P {item.protein} | C {item.carbs} | F {item.fat}</Text>
+              {!!(item as any).meal && <Text className="text-gray-500 text-xs">{(item as any).meal}</Text>}
             </View>
             <Pressable onPress={() => deleteEntry(item.id)}>
               <Text className="text-red-500">Delete</Text>

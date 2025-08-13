@@ -26,6 +26,7 @@ const entrySchema = z.object({
   sugar: z.coerce.number().nonnegative().default(0),
   sodium: z.coerce.number().nonnegative().default(0),
   notes: z.string().optional(),
+  meal: z.enum(['Breakfast', 'Lunch', 'Snack', 'Dinner']).default('Snack'),
 });
 
 export type EntryForm = z.infer<typeof entrySchema>;
@@ -69,6 +70,7 @@ export default function AddEntryScreen() {
       sugar: 0,
       sodium: 0,
       notes: '',
+      meal: 'Snack',
     },
   });
 
@@ -107,6 +109,30 @@ export default function AddEntryScreen() {
           </View>
         )}
       />
+
+      <FormField label="Meal" error={errors.meal?.message}>
+        <Controller
+          control={control}
+          name="meal"
+          render={({ field: { value, onChange } }) => (
+            <View className="flex-row gap-2">
+              {(['Breakfast', 'Lunch', 'Snack', 'Dinner'] as const).map((option) => (
+                <Pressable key={option} onPress={() => onChange(option)} style={{ flex: 1 }}>
+                  <View
+                    className="rounded-xl p-3 items-center"
+                    lightColor={value === option ? '#111' : '#fff'}
+                    darkColor={value === option ? '#fff' : '#111'}
+                  >
+                    <Text className={value === option ? 'font-semibold' : ''} lightColor={value === option ? '#fff' : undefined} darkColor={value === option ? '#000' : undefined}>
+                      {option}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        />
+      </FormField>
 
       <FormField label="Name" error={errors.name?.message}>
         <Controller
