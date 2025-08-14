@@ -3,7 +3,7 @@
  * Purpose: Dashboard screen showing today's totals for calories and macros.
  * Exports: DashboardScreen (default) – computes summaries for the current day.
  */
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ScrollView } from 'react-native';
 import { Link } from 'expo-router';
 import dayjs from 'dayjs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,6 +35,23 @@ const GOALS: Totals & { calories: number } = {
   fat: 50,
   fiber: 25,
 };
+
+const BORDER_COLOR = '#2f2f2f';
+const COL_WIDTHS = {
+  label: 140,
+  protein: 80,
+  fat: 60,
+  carbs: 80,
+  fiber: 60,
+  calories: 100,
+};
+const TABLE_MIN_WIDTH =
+  COL_WIDTHS.label +
+  COL_WIDTHS.protein +
+  COL_WIDTHS.fat +
+  COL_WIDTHS.carbs +
+  COL_WIDTHS.fiber +
+  COL_WIDTHS.calories;
 
 /**
  * Computes the sum of today's entries and renders a quick overview with a table and charts.
@@ -90,37 +107,40 @@ export default function DashboardScreen() {
       <Text className="text-gray-500" style={{ marginBottom: 12 }}>{todayLabel}</Text>
 
       <Card>
-        <TableHeader />
-        {MEALS.map((m) => (
-          <TableRow
-            key={m}
-            label={m}
-            protein={byMeal[m].protein}
-            fat={byMeal[m].fat}
-            carbs={byMeal[m].carbs}
-            fiber={byMeal[m].fiber}
-            calories={byMeal[m].calories}
-          />
-        ))}
-        <View style={{ height: 8 }} />
-        <TableRow
-          label="TOTAL"
-          protein={totals.protein}
-          fat={totals.fat}
-          carbs={totals.carbs}
-          fiber={totals.fiber}
-          calories={totals.calories}
-          bold
-        />
-        <TableRow
-          label="GOALS"
-          protein={GOALS.protein}
-          fat={GOALS.fat}
-          carbs={GOALS.carbs}
-          fiber={GOALS.fiber}
-          calories={GOALS.calories}
-          muted
-        />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ minWidth: TABLE_MIN_WIDTH, borderWidth: 1, borderColor: BORDER_COLOR, borderRadius: 12, overflow: 'hidden' }}>
+            <TableHeader />
+            {MEALS.map((m) => (
+              <TableRow
+                key={m}
+                label={m}
+                protein={byMeal[m].protein}
+                fat={byMeal[m].fat}
+                carbs={byMeal[m].carbs}
+                fiber={byMeal[m].fiber}
+                calories={byMeal[m].calories}
+              />
+            ))}
+            <TableRow
+              label="TOTAL"
+              protein={totals.protein}
+              fat={totals.fat}
+              carbs={totals.carbs}
+              fiber={totals.fiber}
+              calories={totals.calories}
+              bold
+            />
+            <TableRow
+              label="GOALS"
+              protein={GOALS.protein}
+              fat={GOALS.fat}
+              carbs={GOALS.carbs}
+              fiber={GOALS.fiber}
+              calories={GOALS.calories}
+              muted
+            />
+          </View>
+        </ScrollView>
       </Card>
 
       <Link href="/(tabs)/add" className="mt-6 w-full">
@@ -140,28 +160,38 @@ function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   );
 }
 
+function Cell({ children, width, isLast, textClass }: { children: React.ReactNode; width: number; isLast?: boolean; textClass?: string }) {
+  return (
+    <View style={{ width, paddingVertical: 10, paddingHorizontal: 12, borderRightWidth: isLast ? 0 : 1, borderColor: BORDER_COLOR }}>
+      <Text className={textClass}>{children}</Text>
+    </View>
+  );
+}
+
 function TableHeader() {
   return (
-    <View className="flex-row border-b border-gray-200 pb-2 mb-2">
-      <Text style={{ width: 110 }} className="text-gray-500">Aug {dayjs().format('DD')}</Text>
-      <Text style={{ width: 60 }} className="text-gray-500">Protein</Text>
-      <Text style={{ width: 50 }} className="text-gray-500">Fat</Text>
-      <Text style={{ width: 60 }} className="text-gray-500">Carbs</Text>
-      <Text style={{ width: 50 }} className="text-gray-500">Fiber</Text>
-      <Text style={{ marginLeft: 'auto' }} className="text-gray-500">Calories</Text>
+    <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderColor: BORDER_COLOR }}>
+      <Cell width={COL_WIDTHS.label} textClass="text-gray-500">{dayjs().format('MMM DD')}</Cell>
+      <Cell width={COL_WIDTHS.protein} textClass="text-gray-500">Protein</Cell>
+      <Cell width={COL_WIDTHS.fat} textClass="text-gray-500">Fat</Cell>
+      <Cell width={COL_WIDTHS.carbs} textClass="text-gray-500">Carbs</Cell>
+      <Cell width={COL_WIDTHS.fiber} textClass="text-gray-500">Fiber</Cell>
+      <Cell width={COL_WIDTHS.calories} isLast textClass="text-gray-500">Calories</Cell>
     </View>
   );
 }
 
 function TableRow({ label, protein, fat, carbs, fiber, calories, bold, muted }: { label: string; protein: number; fat: number; carbs: number; fiber: number; calories: number; bold?: boolean; muted?: boolean }) {
+  const textClass = bold ? 'font-semibold' : muted ? 'text-gray-500' : '';
+  const labelClass = bold ? 'font-extrabold' : muted ? 'text-gray-500' : '';
   return (
-    <View className="flex-row py-2 border-b border-gray-100">
-      <Text style={{ width: 110 }} className={bold ? 'font-extrabold' : muted ? 'text-gray-500' : ''}>{label}</Text>
-      <Text style={{ width: 60 }} className={bold ? 'font-semibold' : muted ? 'text-gray-500' : ''}>{protein}</Text>
-      <Text style={{ width: 50 }} className={bold ? 'font-semibold' : muted ? 'text-gray-500' : ''}>{fat}</Text>
-      <Text style={{ width: 60 }} className={bold ? 'font-semibold' : muted ? 'text-gray-500' : ''}>{carbs}</Text>
-      <Text style={{ width: 50 }} className={bold ? 'font-semibold' : muted ? 'text-gray-500' : ''}>{fiber}</Text>
-      <Text style={{ marginLeft: 'auto' }} className={bold ? 'font-semibold' : muted ? 'text-gray-500' : ''}>{calories}</Text>
+    <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: BORDER_COLOR }}>
+      <Cell width={COL_WIDTHS.label} textClass={labelClass}>{label}</Cell>
+      <Cell width={COL_WIDTHS.protein} textClass={textClass}>{protein}</Cell>
+      <Cell width={COL_WIDTHS.fat} textClass={textClass}>{fat}</Cell>
+      <Cell width={COL_WIDTHS.carbs} textClass={textClass}>{carbs}</Cell>
+      <Cell width={COL_WIDTHS.fiber} textClass={textClass}>{fiber}</Cell>
+      <Cell width={COL_WIDTHS.calories} isLast textClass={textClass}>{calories}</Cell>
     </View>
   );
 }
