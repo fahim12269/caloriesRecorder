@@ -9,6 +9,8 @@ import dayjs from 'dayjs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Text, View } from '@/components/Themed';
+import { Animated, Easing } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 const STORAGE_KEY = 'calorie_journal_entries_v1';
 
@@ -59,6 +61,7 @@ const TABLE_MIN_WIDTH =
 export default function DashboardScreen() {
   const todayLabel = dayjs().format('dddd, MMM D');
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [animateTick, setAnimateTick] = useState(0);
 
   const loadToday = async () => {
     const json = await AsyncStorage.getItem(STORAGE_KEY);
@@ -72,6 +75,13 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadToday();
   }, []);
+
+  // Re-trigger progress animations whenever the screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setAnimateTick((t) => t + 1);
+    }, [])
+  );
 
   const totals: Totals = useMemo(() => {
     return entries.reduce(
@@ -105,6 +115,45 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Dashboard</Text>
       <Text className="text-gray-500" style={{ marginBottom: 12 }}>{todayLabel}</Text>
+
+      {/* Totals summary with animated progress bars */}
+      <Card>
+        <ProgressRow
+          label="Calories"
+          value={totals.calories}
+          goal={GOALS.calories}
+          color="#22c55e"
+          animateTick={animateTick}
+        />
+        <ProgressRow
+          label="Protein"
+          value={totals.protein}
+          goal={GOALS.protein}
+          color="#60a5fa"
+          animateTick={animateTick}
+        />
+        <ProgressRow
+          label="Carbs"
+          value={totals.carbs}
+          goal={GOALS.carbs}
+          color="#f59e0b"
+          animateTick={animateTick}
+        />
+        <ProgressRow
+          label="Fat"
+          value={totals.fat}
+          goal={GOALS.fat}
+          color="#f97316"
+          animateTick={animateTick}
+        />
+        <ProgressRow
+          label="Fiber"
+          value={totals.fiber}
+          goal={GOALS.fiber}
+          color="#10b981"
+          animateTick={animateTick}
+        />
+      </Card>
 
       <Card>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -156,6 +205,36 @@ function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
     <View className="w-full rounded-2xl p-4" lightColor="#fff" darkColor="#111" style={style}>
       {children}
+    </View>
+  );
+}
+
+function ProgressRow({ label, value, goal, color, animateTick }: { label: string; value: number; goal: number; color: string; animateTick: number }) {
+  const clampedRatio = goal > 0 ? Math.min(value / goal, 1) : 0;
+  const animated = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    animated.setValue(0);
+    Animated.timing(animated, {
+      toValue: clampedRatio,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [animateTick, clampedRatio, animated]);
+
+  const widthInterpolated = animated.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+        <Text className="text-gray-300">{label}</Text>
+        <Text className="font-semibold">{value} / {goal}</Text>
+      </View>
+      <View style={{ height: 10, borderRadius: 999, overflow: 'hidden' }} lightColor="#1f2937" darkColor="#0a0a0a">
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: '#1f2937' }} />
+        <Animated.View style={{ height: '100%', width: widthInterpolated, backgroundColor: color }} />
+      </View>
     </View>
   );
 }
