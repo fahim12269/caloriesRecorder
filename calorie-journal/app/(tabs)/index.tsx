@@ -30,13 +30,14 @@ type Totals = { calories: number; protein: number; carbs: number; fat: number; f
 
 const MEALS: Array<NonNullable<Entry['meal']>> = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
-const GOALS: Totals & { calories: number } = {
+const DEFAULT_GOALS: Totals & { calories: number } = {
   calories: 1760,
   protein: 120,
   carbs: 230,
   fat: 50,
   fiber: 25,
 };
+const GOALS_STORAGE_KEY = 'calorie_journal_goals_v1';
 
 const BORDER_COLOR = '#2f2f2f';
 const COL_WIDTHS = {
@@ -62,6 +63,7 @@ export default function DashboardScreen() {
   const todayLabel = dayjs().format('dddd, MMM D');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [animateTick, setAnimateTick] = useState(0);
+  const [goals, setGoals] = useState<Totals & { calories: number }>(DEFAULT_GOALS);
 
   const loadToday = async () => {
     const json = await AsyncStorage.getItem(STORAGE_KEY);
@@ -72,14 +74,22 @@ export default function DashboardScreen() {
     setEntries(todayEntries);
   };
 
+  const loadGoals = async () => {
+    const json = await AsyncStorage.getItem(GOALS_STORAGE_KEY);
+    const saved = json ? JSON.parse(json) : null;
+    if (saved) setGoals(saved);
+  };
+
   useEffect(() => {
     loadToday();
+    loadGoals();
   }, []);
 
   // Re-trigger progress animations whenever the screen gains focus
   useFocusEffect(
     React.useCallback(() => {
       setAnimateTick((t) => t + 1);
+      loadGoals();
     }, [])
   );
 
@@ -121,35 +131,35 @@ export default function DashboardScreen() {
         <ProgressRow
           label="Calories"
           value={totals.calories}
-          goal={GOALS.calories}
+          goal={goals.calories}
           color="#22c55e"
           animateTick={animateTick}
         />
         <ProgressRow
           label="Protein"
           value={totals.protein}
-          goal={GOALS.protein}
+          goal={goals.protein}
           color="#60a5fa"
           animateTick={animateTick}
         />
         <ProgressRow
           label="Carbs"
           value={totals.carbs}
-          goal={GOALS.carbs}
+          goal={goals.carbs}
           color="#f59e0b"
           animateTick={animateTick}
         />
         <ProgressRow
           label="Fat"
           value={totals.fat}
-          goal={GOALS.fat}
+          goal={goals.fat}
           color="#f97316"
           animateTick={animateTick}
         />
         <ProgressRow
           label="Fiber"
           value={totals.fiber}
-          goal={GOALS.fiber}
+          goal={goals.fiber}
           color="#10b981"
           animateTick={animateTick}
         />
@@ -181,11 +191,11 @@ export default function DashboardScreen() {
             />
             <TableRow
               label="GOALS"
-              protein={GOALS.protein}
-              fat={GOALS.fat}
-              carbs={GOALS.carbs}
-              fiber={GOALS.fiber}
-              calories={GOALS.calories}
+              protein={goals.protein}
+              fat={goals.fat}
+              carbs={goals.carbs}
+              fiber={goals.fiber}
+              calories={goals.calories}
               muted
             />
           </View>
