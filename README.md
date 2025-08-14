@@ -1,6 +1,4 @@
-<<<<<<< Current (Your changes)
 # caloriesRecorder
-=======
 # Calorie Journal (Workspace)
 
 This workspace contains the Calorie Journal app located in `calorie-journal/`.
@@ -12,4 +10,3 @@ This workspace contains the Calorie Journal app located in `calorie-journal/`.
   - `npm run start`
 
 The app is an Expo Router project for tracking calories and macros offline. See the app README for features, project structure, and scripts.
->>>>>>> Incoming (Background Agent changes)
