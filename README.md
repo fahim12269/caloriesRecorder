@@ -1,4 +1,3 @@
-# caloriesRecorder
 # Calorie Journal (Workspace)
 
 This workspace contains the Calorie Journal app located in `calorie-journal/`.
