@@ -3,11 +3,11 @@
  * Purpose: Screen for creating a new calorie journal entry with macros and notes.
  * Exports: AddEntryScreen (default) – form-driven UI using react-hook-form and zod validation.
  */
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import React, { useMemo, useState } from 'react';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Platform, ScrollView, TextInput, Pressable } from 'react-native';
+import { Pressable, ScrollView, TextInput } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import dayjs from 'dayjs';
 import * as Crypto from 'expo-crypto';
@@ -15,71 +15,103 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Text, View } from '@/components/Themed';
 
-const entrySchema = z.object({
-  date: z.date(),
-  name: z.string().min(1, 'Required'),
-  calories: z.coerce.number().nonnegative(),
-  protein: z.coerce.number().nonnegative().default(0),
-  carbs: z.coerce.number().nonnegative().default(0),
-  fat: z.coerce.number().nonnegative().default(0),
-  fiber: z.coerce.number().nonnegative().default(0),
-  sugar: z.coerce.number().nonnegative().default(0),
-  sodium: z.coerce.number().nonnegative().default(0),
-  notes: z.string().optional(),
-  meal: z.enum(['Breakfast', 'Lunch', 'Snack', 'Dinner']).default('Snack'),
-});
-
-export type EntryForm = z.infer<typeof entrySchema>;
-
 const STORAGE_KEY = 'calorie_journal_entries_v1';
 
-/**
- * Reads all saved entries from AsyncStorage.
- * Returns an empty array when no entries exist.
- */
+const mealSchema = z.object({
+  name: z.string(),
+  calories: z.coerce.number().nonnegative().optional(),
+  protein: z.coerce.number().nonnegative().optional(),
+  carbs: z.coerce.number().nonnegative().optional(),
+  fat: z.coerce.number().nonnegative().optional(),
+  fiber: z.coerce.number().nonnegative().optional(),
+  sugar: z.coerce.number().nonnegative().optional(),
+});
+
+const dayEntrySchema = z.object({
+  date: z.date(),
+  notes: z.string().optional(),
+  meals: z.array(mealSchema).min(1),
+});
+
+export type DayEntryForm = z.infer<typeof dayEntrySchema>;
+
 async function loadEntries(): Promise<any[]> {
   const json = await AsyncStorage.getItem(STORAGE_KEY);
   return json ? JSON.parse(json) : [];
 }
 
-/**
- * Persists a new entry by prepending to the stored list in AsyncStorage.
- */
-async function saveEntry(entry: any) {
-  const entries = await loadEntries();
-  const updated = [entry, ...entries];
+async function saveEntries(newEntries: any[]) {
+  if (!newEntries.length) return;
+  const existing = await loadEntries();
+  const updated = [...newEntries, ...existing];
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
 
-/**
- * Displays a form to create a new entry, validates input, and saves to local storage.
- */
 export default function AddEntryScreen() {
   const [showDate, setShowDate] = useState(false);
 
-  const { control, handleSubmit, formState: { errors }, reset } = useForm<EntryForm>({
-    resolver: zodResolver(entrySchema),
+  const { control, handleSubmit, formState: { errors }, reset, watch } = useForm<DayEntryForm>({
+    resolver: zodResolver(dayEntrySchema),
     defaultValues: {
       date: new Date(),
-      name: '',
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fat: 0,
-      fiber: 0,
-      sugar: 0,
-      sodium: 0,
       notes: '',
-      meal: 'Snack',
+      meals: [
+        { name: 'Breakfast' },
+        { name: 'Lunch' },
+        { name: 'Dinner' },
+      ],
     },
   });
 
-  const onSubmit = async (data: EntryForm) => {
-    const entry = { id: await Crypto.randomUUID(), ...data };
-    await saveEntry(entry);
-    reset();
-    alert('Saved');
+  const { fields, append } = useFieldArray({ control, name: 'meals' });
+
+  const [expandedByIndex, setExpandedByIndex] = useState<Record<number, boolean>>({ 0: true, 1: true, 2: true });
+  const toggleExpanded = (index: number) => {
+    setExpandedByIndex((prev) => ({ ...prev, [index]: !prev[index] }));
   };
+
+  const onSubmit = async (data: DayEntryForm) => {
+    const entriesToSave: any[] = [];
+    for (const meal of data.meals) {
+      const calories = Number(meal.calories || 0);
+      const protein = Number(meal.protein || 0);
+      const carbs = Number(meal.carbs || 0);
+      const fat = Number(meal.fat || 0);
+      const fiber = Number(meal.fiber || 0);
+      const sugar = Number(meal.sugar || 0);
+
+      const hasAnyValue = [calories, protein, carbs, fat, fiber, sugar].some((v) => v > 0);
+      if (!hasAnyValue) continue;
+
+      entriesToSave.push({
+        id: await Crypto.randomUUID(),
+        date: data.date,
+        name: meal.name,
+        calories,
+        protein,
+        carbs,
+        fat,
+        fiber,
+        sugar,
+        meal: meal.name,
+      });
+    }
+
+    await saveEntries(entriesToSave);
+    reset({
+      date: new Date(),
+      notes: '',
+      meals: [
+        { name: 'Breakfast' },
+        { name: 'Lunch' },
+        { name: 'Dinner' },
+      ],
+    });
+    setExpandedByIndex({ 0: true, 1: true, 2: true });
+    alert(entriesToSave.length ? 'Saved' : 'Nothing to save');
+  };
+
+  const nextMealName = useMemo(() => `Meal ${fields.length + 1}`, [fields.length]);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -110,76 +142,37 @@ export default function AddEntryScreen() {
         )}
       />
 
-      <FormField label="Meal" error={errors.meal?.message}>
-        <Controller
-          control={control}
-          name="meal"
-          render={({ field: { value, onChange } }) => (
-            <View className="flex-row gap-2">
-              {(['Breakfast', 'Lunch', 'Snack', 'Dinner'] as const).map((option) => (
-                <Pressable key={option} onPress={() => onChange(option)} style={{ flex: 1 }}>
-                  <View
-                    className="rounded-xl p-3 items-center"
-                    lightColor={value === option ? '#111' : '#fff'}
-                    darkColor={value === option ? '#fff' : '#111'}
-                  >
-                    <Text className={value === option ? 'font-semibold' : ''} lightColor={value === option ? '#fff' : undefined} darkColor={value === option ? '#000' : undefined}>
-                      {option}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
+      {fields.map((field, index) => (
+        <View key={field.id}>
+          <Pressable onPress={() => toggleExpanded(index)}>
+            <View className="rounded-2xl p-4 flex-row items-center justify-between" lightColor="#fff" darkColor="#111">
+              <Text className="text-lg font-semibold">{watch(`meals.${index}.name`) || field.name}</Text>
+              <Text className="text-gray-500">{expandedByIndex[index] ? '▲' : '▼'}</Text>
+            </View>
+          </Pressable>
+
+          {expandedByIndex[index] && (
+            <View className="rounded-2xl p-4 mt-2" lightColor="#fff" darkColor="#111">
+              <View className="flex-row gap-3">
+                <MacroInput control={control} name={`meals.${index}.calories`} label="Calories" error={undefined} />
+                <MacroInput control={control} name={`meals.${index}.protein`} label="Protein (g)" error={undefined} />
+                <MacroInput control={control} name={`meals.${index}.carbs`} label="Carbs (g)" error={undefined} />
+              </View>
+              <View className="flex-row gap-3 mt-3">
+                <MacroInput control={control} name={`meals.${index}.fat`} label="Fat (g)" error={undefined} />
+                <MacroInput control={control} name={`meals.${index}.fiber`} label="Fiber (g)" error={undefined} />
+                <MacroInput control={control} name={`meals.${index}.sugar`} label="Sugar (g)" error={undefined} />
+              </View>
             </View>
           )}
-        />
-      </FormField>
+        </View>
+      ))}
 
-      <FormField label="Name" error={errors.name?.message}>
-        <Controller
-          control={control}
-          name="name"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="e.g. Chicken bowl"
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#fff' }}
-            />
-          )}
-        />
-      </FormField>
-
-      <FormField label="Calories (kcal)" error={errors.calories?.message}>
-        <Controller
-          control={control}
-          name="calories"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextInput
-              value={String(value ?? '')}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              keyboardType="numeric"
-              placeholder="0"
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#fff' }}
-            />
-          )}
-        />
-      </FormField>
-
-      <View className="flex-row gap-3">
-        <MacroInput control={control} name="protein" label="Protein (g)" error={errors.protein?.message} />
-        <MacroInput control={control} name="carbs" label="Carbs (g)" error={errors.carbs?.message} />
-        <MacroInput control={control} name="fat" label="Fat (g)" error={errors.fat?.message} />
-      </View>
-
-      <View className="flex-row gap-3">
-        <MacroInput control={control} name="fiber" label="Fiber (g)" error={errors.fiber?.message} />
-        <MacroInput control={control} name="sugar" label="Sugar (g)" error={errors.sugar?.message} />
-        <MacroInput control={control} name="sodium" label="Sodium (mg)" error={errors.sodium?.message} />
-      </View>
+      <Pressable onPress={() => append({ name: nextMealName })}>
+        <View className="rounded-2xl p-4 items-center border-2 border-dashed" lightColor="#e5e7eb" darkColor="#333">
+          <Text className="font-semibold">+ Add meal</Text>
+        </View>
+      </Pressable>
 
       <FormField label="Notes" error={errors.notes?.message}>
         <Controller
@@ -200,17 +193,14 @@ export default function AddEntryScreen() {
       </FormField>
 
       <Pressable onPress={handleSubmit(onSubmit)}>
-        <View className="rounded-2xl p-4 items-center" lightColor="#22c55e" darkColor="#16a34a">
-          <Text className="text-white font-semibold">Save</Text>
+        <View className="rounded-2xl p-4 items-center" lightColor="#111" darkColor="#fff">
+          <Text className="font-semibold" lightColor="#fff" darkColor="#000">Save</Text>
         </View>
       </Pressable>
     </ScrollView>
   );
 }
 
-/**
- * Simple wrapper to show a label, children input, and an optional error message.
- */
 function FormField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <View>
@@ -221,9 +211,6 @@ function FormField({ label, error, children }: { label: string; error?: string; 
   );
 }
 
-/**
- * Numeric input used for macro/micro nutrient fields.
- */
 function MacroInput({ control, name, label, error }: any) {
   return (
     <View style={{ flex: 1 }}>
