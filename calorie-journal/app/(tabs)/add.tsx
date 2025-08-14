@@ -3,7 +3,7 @@
  * Purpose: Screen for creating a new calorie journal entry with macros and notes.
  * Exports: AddEntryScreen (default) – form-driven UI using react-hook-form and zod validation.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View } from '@/components/Themed';
 
 const STORAGE_KEY = 'calorie_journal_entries_v1';
+const EXPANDED_STATE_KEY = 'add_screen_expanded_state_v1';
+const BORDER_COLOR = '#2f2f2f';
 
 const mealSchema = z.object({
   name: z.string(),
@@ -65,10 +67,46 @@ export default function AddEntryScreen() {
 
   const { fields, append } = useFieldArray({ control, name: 'meals' });
 
-  const [expandedByIndex, setExpandedByIndex] = useState<Record<number, boolean>>({ 0: true, 1: true, 2: true });
+  // Track expanded/collapsed state per meal; default to all closed.
+  const [expandedByIndex, setExpandedByIndex] = useState<Record<number, boolean>>({});
   const toggleExpanded = (index: number) => {
     setExpandedByIndex((prev) => ({ ...prev, [index]: !prev[index] }));
   };
+
+  // Ensure state exists for all current fields and defaults to closed
+  useEffect(() => {
+    setExpandedByIndex((prev) => {
+      const next: Record<number, boolean> = { ...prev };
+      fields.forEach((_, i) => {
+        if (next[i] === undefined) next[i] = false;
+      });
+      Object.keys(next).forEach((k) => {
+        const idx = Number(k);
+        if (idx >= fields.length) delete next[idx];
+      });
+      return next;
+    });
+  }, [fields.length]);
+
+  // Load persisted expanded state on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const json = await AsyncStorage.getItem(EXPANDED_STATE_KEY);
+        if (json) {
+          const saved = JSON.parse(json) as Record<number, boolean>;
+          setExpandedByIndex((prev) => ({ ...prev, ...saved }));
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  // Persist expanded state whenever it changes
+  useEffect(() => {
+    AsyncStorage.setItem(EXPANDED_STATE_KEY, JSON.stringify(expandedByIndex)).catch(() => {});
+  }, [expandedByIndex]);
 
   const onSubmit = async (data: DayEntryForm) => {
     const entriesToSave: any[] = [];
@@ -107,7 +145,7 @@ export default function AddEntryScreen() {
         { name: 'Dinner' },
       ],
     });
-    setExpandedByIndex({ 0: true, 1: true, 2: true });
+    // Keep expanded state as-is to respect user's preference across screen switches
     alert(entriesToSave.length ? 'Saved' : 'Nothing to save');
   };
 
@@ -123,7 +161,7 @@ export default function AddEntryScreen() {
         render={({ field: { value, onChange } }) => (
           <View>
             <Pressable onPress={() => setShowDate(true)}>
-              <View className="rounded-2xl p-4" lightColor="#fff" darkColor="#111">
+              <View className="rounded-2xl p-4" lightColor="#fff" darkColor="#111" style={{ borderWidth: 1, borderColor: BORDER_COLOR }}>
                 <Text className="text-gray-500">Date</Text>
                 <Text className="text-lg font-semibold mt-1">{dayjs(value).format('YYYY-MM-DD')}</Text>
               </View>
@@ -145,14 +183,14 @@ export default function AddEntryScreen() {
       {fields.map((field, index) => (
         <View key={field.id}>
           <Pressable onPress={() => toggleExpanded(index)}>
-            <View className="rounded-2xl p-4 flex-row items-center justify-between" lightColor="#fff" darkColor="#111">
+            <View className="rounded-2xl p-4 flex-row items-center justify-between" lightColor="#fff" darkColor="#111" style={{ borderWidth: 1, borderColor: BORDER_COLOR }}>
               <Text className="text-lg font-semibold">{watch(`meals.${index}.name`) || field.name}</Text>
               <Text className="text-gray-500">{expandedByIndex[index] ? '▲' : '▼'}</Text>
             </View>
           </Pressable>
 
           {expandedByIndex[index] && (
-            <View className="rounded-2xl p-4 mt-2" lightColor="#fff" darkColor="#111">
+            <View className="rounded-2xl p-4 mt-2" lightColor="#fff" darkColor="#111" style={{ borderWidth: 1, borderColor: BORDER_COLOR }}>
               <View className="flex-row gap-3">
                 <MacroInput control={control} name={`meals.${index}.calories`} label="Calories" error={undefined} />
                 <MacroInput control={control} name={`meals.${index}.protein`} label="Protein (g)" error={undefined} />
@@ -169,7 +207,7 @@ export default function AddEntryScreen() {
       ))}
 
       <Pressable onPress={() => append({ name: nextMealName })}>
-        <View className="rounded-2xl p-4 items-center border-2 border-dashed" lightColor="#e5e7eb" darkColor="#333">
+        <View className="rounded-2xl p-4 items-center border-2 border-dashed" lightColor="#e5e7eb" darkColor="#333" style={{ borderColor: BORDER_COLOR }}>
           <Text className="font-semibold">+ Add meal</Text>
         </View>
       </Pressable>
@@ -184,8 +222,8 @@ export default function AddEntryScreen() {
               onChangeText={onChange}
               onBlur={onBlur}
               placeholder="Optional"
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#fff', minHeight: 100 }}
+              className="rounded-2xl p-4 bg-white dark:bg-[#111] border"
+              style={{ minHeight: 100, borderColor: BORDER_COLOR }}
               multiline
             />
           )}
@@ -193,7 +231,7 @@ export default function AddEntryScreen() {
       </FormField>
 
       <Pressable onPress={handleSubmit(onSubmit)}>
-        <View className="rounded-2xl p-4 items-center" lightColor="#111" darkColor="#fff">
+        <View className="rounded-2xl p-4 items-center" lightColor="#111" darkColor="#fff" style={{ borderWidth: 1, borderColor: BORDER_COLOR }}>
           <Text className="font-semibold" lightColor="#fff" darkColor="#000">Save</Text>
         </View>
       </Pressable>
@@ -225,8 +263,8 @@ function MacroInput({ control, name, label, error }: any) {
               onBlur={onBlur}
               keyboardType="numeric"
               placeholder="0"
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#fff' }}
+              className="rounded-2xl p-4 bg-white dark:bg-[#111] border"
+              style={{ borderColor: BORDER_COLOR }}
             />
           )}
         />
